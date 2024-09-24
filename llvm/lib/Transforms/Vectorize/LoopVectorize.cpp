@@ -1582,7 +1582,11 @@ public:
   }
 
   void addPartialReductionIfSupported(Instruction *Instr, ElementCount VF) {
-    using namespace llvm::PatternMatch;
+
+
+    // TODO: Allow creating partial reductions when masking the instructions in the loop.
+    // The active lane mask phi uses the full VF which is incompatible with the reduced VF that is fed into the reduction Phi node.
+    if (foldTailByMasking() || Hints->getPredicate()) return;
 
     // Try to commutatively match:
     // bin_op (one_use bin_op (z_or_sext, z_or_sext), phi)
