@@ -354,10 +354,9 @@ public:
     EVT InputEVT = EVT::getEVT(InputType);
     EVT AccumEVT = EVT::getEVT(AccumType);
 
-    if (AccumEVT.isScalableVector() && !ST->isSVEorStreamingSVEAvailable())
+    if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
       return Invalid;
-    if (AccumEVT.isFixedLengthVector() && !ST->isNeonAvailable() &&
-        !ST->hasDotProd())
+    if (VF.isFixed() && !ST->isNeonAvailable() && !ST->hasDotProd())
       return Invalid;
 
     if (InputEVT == MVT::i8) {
