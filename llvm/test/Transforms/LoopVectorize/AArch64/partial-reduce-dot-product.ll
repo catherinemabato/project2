@@ -65,8 +65,8 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-define void @dotp_different_types(ptr %a, ptr %b) #0 {
-; CHECK-LABEL: define void @dotp_different_types(
+define void @not_dotp_different_types(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define void @not_dotp_different_types(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -176,8 +176,8 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-define void @dotp_not_loop_carried(ptr %a, ptr %b) #0 {
-; CHECK-LABEL: define void @dotp_not_loop_carried(
+define void @not_dotp_not_loop_carried(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define void @not_dotp_not_loop_carried(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -218,11 +218,11 @@ define void @dotp_not_loop_carried(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP21:%.*]] = mul i32 [[TMP20]], 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = sub i32 [[TMP21]], 1
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <vscale x 8 x i32> [[TMP18]], i32 [[TMP22]]
-; CHECK-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP24:%.*]] = mul i32 [[TMP23]], 8
-; CHECK-NEXT:    [[TMP25:%.*]] = sub i32 [[TMP24]], 1
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP16]], i32 [[TMP25]]
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 8 x i32> [[TMP18]], i32 [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP25:%.*]] = mul i32 [[TMP24]], 8
+; CHECK-NEXT:    [[TMP26:%.*]] = sub i32 [[TMP25]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP16]], i32 [[TMP26]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 0, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ;
@@ -249,8 +249,8 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-define void @dotp_not_phi(ptr %a, ptr %b) #0 {
-; CHECK-LABEL: define void @dotp_not_phi(
+define void @not_dotp_not_phi(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define void @not_dotp_not_phi(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -290,11 +290,11 @@ define void @dotp_not_phi(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul i32 [[TMP19]], 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP20]], 1
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP17]], i32 [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP23:%.*]] = mul i32 [[TMP22]], 8
-; CHECK-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP23]], 1
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 8 x i32> [[TMP17]], i32 [[TMP24]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <vscale x 8 x i32> [[TMP17]], i32 [[TMP21]]
+; CHECK-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP24:%.*]] = mul i32 [[TMP23]], 8
+; CHECK-NEXT:    [[TMP25:%.*]] = sub i32 [[TMP24]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 8 x i32> [[TMP17]], i32 [[TMP25]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 0, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ;
@@ -605,4 +605,69 @@ for.end98:                                        ; preds = %for.end98.loopexit1
   ret void
 }
 
+define i32 @not_dotp_predicated(ptr %a, ptr %b) #0 {
+; CHECK-LABEL: define i32 @not_dotp_predicated(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 0, [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 0, [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 0, [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i8>, ptr [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = zext <vscale x 4 x i8> [[WIDE_LOAD]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i8>, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = zext <vscale x 4 x i8> [[WIDE_LOAD1]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = mul <vscale x 4 x i32> [[TMP12]], [[TMP9]]
+; CHECK-NEXT:    [[TMP14]] = add <vscale x 4 x i32> [[TMP13]], [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP14]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 0, [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+;
+entry:
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %for.body
+  %result = lshr i32 %add, 0
+  ret i32 %result
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %load.a = load i8, ptr %gep.a, align 1
+  %ext.a = zext i8 %load.a to i32
+  %gep.b = getelementptr i8, ptr %b, i64 %iv
+  %load.b = load i8, ptr %gep.b, align 1
+  %ext.b = zext i8 %load.b to i32
+  %mul = mul i32 %ext.b, %ext.a
+  %add = add i32 %mul, %accum
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 0
+  br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !7
+}
+
+!7 = distinct !{!7, !8, !9, !10}
+!8 = !{!"llvm.loop.mustprogress"}
+!9 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!10 = !{!"llvm.loop.vectorize.enable", i1 true}
 attributes #0 = { nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable vscale_range(1,16) "target-features"="+sve" }
