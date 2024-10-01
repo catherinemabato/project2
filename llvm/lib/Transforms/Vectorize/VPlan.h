@@ -2206,7 +2206,10 @@ public:
   template <typename IterT>
   VPPartialReductionRecipe(Instruction &I, iterator_range<IterT> Operands)
       : VPRecipeWithIRFlags(VPDef::VPPartialReductionSC, Operands, I),
-        Opcode(I.getOpcode()), Reduction(I) {}
+        Opcode(I.getOpcode()), Reduction(I) {
+    assert(isa<VPReductionPHIRecipe>(getOperand(1)->getDefiningRecipe()) &&
+           "Unexpected operand order for partial reduction recipe");
+  }
   ~VPPartialReductionRecipe() override = default;
   VPPartialReductionRecipe *clone() override {
     auto Ops = operands();
