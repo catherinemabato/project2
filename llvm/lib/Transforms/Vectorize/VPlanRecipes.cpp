@@ -324,26 +324,19 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 
   assert(Opcode == Instruction::Add && "Unhandled partial reduction opcode");
 
-  SmallVector<VPValue *, 2> Operands;
-  for (auto *Op : operands())
-    Operands.push_back(Op);
+  Value *BinOpVal = State.get(getOperand(0), 0);
+  Value *PhiVal = State.get(getOperand(1), 0);
+  assert(PhiVal && BinOpVal && "Phi and Mul must be set");
 
-  unsigned UF = getParent()->getPlan()->getUF();
-  for (unsigned Part = 0; Part < UF; ++Part) {
-    Value *BinOpVal = State.get(Operands[0], Part);
-    Value *PhiVal = State.get(Operands[1], Part);
-    assert(PhiVal && BinOpVal && "Phi and Mul must be set");
+  Type *RetTy = PhiVal->getType();
 
-    Type *RetTy = PhiVal->getType();
+  CallInst *V = Builder.CreateIntrinsic(
+      RetTy, Intrinsic::experimental_vector_partial_reduce_add,
+      {PhiVal, BinOpVal}, nullptr, Twine("partial.reduce"));
 
-    CallInst *V = Builder.CreateIntrinsic(
-        RetTy, Intrinsic::experimental_vector_partial_reduce_add,
-        {PhiVal, BinOpVal}, nullptr, Twine("partial.reduce"));
-
-    // Use this vector value for all users of the original instruction.
-    State.set(this, V, Part);
-    State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
-  }
+  // Use this vector value for all users of the original instruction.
+  State.set(this, V, 0);
+  State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3052,7 +3045,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
         Constant *Zero = Builder.getInt32(0);
         StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
       } else {
-        Iden = Builder.CreateVectorSplat(State.VF, Iden);
+        Iden = Builder.CreateVectorSplat(VF, Iden);
       }
     }
   }

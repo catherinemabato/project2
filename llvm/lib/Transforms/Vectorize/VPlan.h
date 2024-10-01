@@ -2200,18 +2200,18 @@ public:
 /// scalar value.
 class VPPartialReductionRecipe : public VPRecipeWithIRFlags {
   unsigned Opcode;
-  unsigned Scale;
+  Instruction &Reduction;
 
 public:
   template <typename IterT>
   VPPartialReductionRecipe(Instruction &I, iterator_range<IterT> Operands)
       : VPRecipeWithIRFlags(VPDef::VPPartialReductionSC, Operands, I),
-        Opcode(I.getOpcode()) {}
+        Opcode(I.getOpcode()), Reduction(I) {}
   ~VPPartialReductionRecipe() override = default;
   VPPartialReductionRecipe *clone() override {
-    llvm_unreachable(
-        "Partial reductions with epilogue vectorization isn't supported yet.");
-    return nullptr;
+    auto Ops = operands();
+    return new VPPartialReductionRecipe(Reduction,
+                                        make_range(Ops.begin(), Ops.end()));
   }
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
   /// Generate the reduction in the loop
