@@ -1581,14 +1581,11 @@ public:
     return PairIt->second;
   }
 
-  void addPartialReductionIfSupported(Instruction *Instr, ElementCount VF) {
+  void removePartialReduction(Instruction *Instr) {
+    PartialReductionChains.erase(Instr);
+  }
 
-    // TODO: Allow creating partial reductions when predication has been
-    // requested explicitly with a pragma. The active lane mask phi uses the
-    // full VF which is incompatible with the reduced VF that is fed into the
-    // reduction Phi node.
-    if (Hints->getPredicate() == 1)
-      return;
+  void addPartialReductionIfSupported(Instruction *Instr, ElementCount VF) {
 
     // Try to commutatively match:
     // bin_op (one_use bin_op (z_or_sext, z_or_sext), phi)
@@ -7186,18 +7183,19 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       };
 
   // Check if each use of a chain's two extends is a partial reduction
-  SmallVector<Instruction *, 2> ChainsToRemove;
+  // and remove those that have non-partial reduction users
+  SmallSet<Instruction *, 4> PartialReductionsToRemove;
   for (auto It : CM.getPartialReductionChains()) {
     LoopVectorizationCostModel::PartialReductionChain Chain = It.second;
-    if (!ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA))
-      ChainsToRemove.push_back(Chain.Reduction);
-    else if (!ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB))
-      ChainsToRemove.push_back(Chain.Reduction);
+    if (!ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) ||
+        !ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)) {
+      PartialReductionsToRemove.insert(Chain.Reduction);
+      LLVM_DEBUG(dbgs() << "Removing the partial reduction for an instruction "
+                           "with an extend used by something other than a "
+                           "partial reduction "
+                        << *Chain.Reduction << "\n");
+    }
   }
-
-  // Remove those that have non-partial reduction users
-  for (auto *It : ChainsToRemove)
-    CM.getPartialReductionChains().erase(It);
 
   CM.collectValuesToIgnore();
   CM.collectElementTypesForWidening();
@@ -7222,6 +7220,23 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   if (CM.foldTailByMasking())
     Legal->prepareToFoldTailByMasking();
+
+  for (auto Pair : CM.getPartialReductionChains()) {
+    // TODO: Allow creating partial reductions when predicating. The select at
+    // the end of the loop chooses between the phi value and most recent partial
+    // reduction result, both of which have different VFs to the active lane
+    // mask.
+    Instruction *Instr = Pair.first;
+    if (CM.blockNeedsPredicationForAnyReason(Instr->getParent())) {
+      LLVM_DEBUG(dbgs() << "LV: Removing the partial reduction for an "
+                           "instruction in a predicated block: "
+                        << *Instr << "\n");
+      PartialReductionsToRemove.insert(Instr);
+    }
+  }
+
+  for (auto *Insn : PartialReductionsToRemove)
+    CM.removePartialReduction(Insn);
 
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
