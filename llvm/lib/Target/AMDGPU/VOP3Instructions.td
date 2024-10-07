@@ -756,7 +756,7 @@ class OpSelBinOpClampPat<SDPatternOperator node,
   (inst $src0_modifiers, $src0, $src1_modifiers, $src1, DSTCLAMP.ENABLE, 0)
 >;
 
-let OtherPredicates = [isGFX9Plus], True16Predicate = NotHasTrue16BitInsts in {
+let SubtargetPredicate = isGFX9Plus, True16Predicate = NotHasTrue16BitInsts in {
   def : OpSelBinOpClampPat<saddsat, V_ADD_I16_e64>;
   def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_e64>;
 } // End OtherPredicates = [isGFX9Plus], True16Predicate = NotHasTrue16BitInsts
@@ -877,7 +877,7 @@ let SubtargetPredicate = isGFX10Plus in {
 
 } // End SubtargetPredicate = isGFX10Plus
 
-let True16Predicate = NotHasTrue16BitInsts, OtherPredicates = [isGFX10Plus] in {
+let True16Predicate = NotHasTrue16BitInsts, SubtargetPredicate = isGFX10Plus in {
    def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_e64>;
    def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_e64>;
    // Undo sub x, c -> add x, -c canonicalization since c is more likely
@@ -1112,12 +1112,6 @@ multiclass VOP3_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
   VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
 
-multiclass VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string opName,
-                                                 string asmName> {
-  defm opName#"_t16": VOP3_Realtriple_with_name_gfx11_gfx12<op, opName#"_t16", asmName>;
-  defm opName#"_fake16": VOP3_Realtriple_with_name_gfx11_gfx12<op, opName#"_fake16", asmName>;
-}
-
 multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Dot_Realtriple<GFX11Gen, op>, VOP3Dot_Realtriple<GFX12Gen, op>;
 
@@ -1126,7 +1120,7 @@ multiclass VOP3_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string o
   VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
-multiclass VOP3_Realtriple_t16_and_f16_gfx11_gfx12<bits<10> op, string asmName, string opName = NAME,
+multiclass VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string opName = NAME,
                                      string pseudo_mnemonic = "", bit isSingle = 0> {
   defm opName#"_t16": VOP3_Realtriple_t16_gfx11_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
   defm opName#"_fake16": VOP3_Realtriple_t16_gfx11_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
@@ -1226,8 +1220,8 @@ defm V_MAX_U16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x30
 defm V_MAX_I16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x30a, "v_max_i16">;
 defm V_MIN_U16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x30b, "v_min_u16">;
 defm V_MIN_I16             : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x30c, "v_min_i16">;
-defm V_ADD_NC_I16          : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x30d, "V_ADD_I16", "v_add_nc_i16">;
-defm V_SUB_NC_I16          : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x30e, "V_SUB_I16", "v_sub_nc_i16">;
+defm V_ADD_NC_I16          : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x30d, "v_add_nc_i16", "V_ADD_I16">;
+defm V_SUB_NC_I16          : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x30e, "v_sub_nc_i16", "V_SUB_I16">;
 defm V_PACK_B32_F16        : VOP3_Realtriple_gfx11_gfx12<0x311>;
 defm V_CVT_PK_NORM_I16_F16 : VOP3_Realtriple_with_name_gfx11_gfx12<0x312, "V_CVT_PKNORM_I16_F16" , "v_cvt_pk_norm_i16_f16" >;
 defm V_CVT_PK_NORM_U16_F16 : VOP3_Realtriple_with_name_gfx11_gfx12<0x313, "V_CVT_PKNORM_U16_F16" , "v_cvt_pk_norm_u16_f16" >;

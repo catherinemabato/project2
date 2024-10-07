@@ -1487,7 +1487,7 @@ multiclass VOP3Inst_t16<string OpName, VOPProfile P,
 // VOP3 DPP
 //===----------------------------------------------------------------------===//
 
-class Base_VOP3_DPP16<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
+class VOP3_DPP16_Helper<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
     : VOP3_DPP<op, opName, ps.Pfl, 1> {
   let VOP3_OPSEL = ps.Pfl.HasOpSel;
   let IsDOT = ps.IsDOT;
@@ -1500,7 +1500,7 @@ class Base_VOP3_DPP16<bits<10> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>
   let OtherPredicates = ps.OtherPredicates;
 }
 
-class Base_VOP3_DPP16_t16<bits<10> op, VOP_DPP_Pseudo ps,
+class VOP3_DPP16_t16_Helper<bits<10> op, VOP_DPP_Pseudo ps,
                           string opName = ps.OpName>
     : VOP3_DPP_t16<op, opName, ps.Pfl, 1> {
   let VOP3_OPSEL = ps.Pfl.HasOpSel;
@@ -1516,11 +1516,11 @@ class Base_VOP3_DPP16_t16<bits<10> op, VOP_DPP_Pseudo ps,
 
 class VOP3_DPP16<bits<10> op, VOP_DPP_Pseudo ps, int subtarget,
                  string opName = ps.OpName>
-    : Base_VOP3_DPP16<op, ps, opName>, SIMCInstr<ps.PseudoInstr, subtarget>;
+    : VOP3_DPP16_Helper<op, ps, opName>, SIMCInstr<ps.PseudoInstr, subtarget>;
 
 class VOP3_DPP16_t16<bits<10> op, VOP_DPP_Pseudo ps, int subtarget,
                  string opName = ps.OpName>
-    : Base_VOP3_DPP16_t16<op, ps, opName>, SIMCInstr<ps.PseudoInstr, subtarget>;
+    : VOP3_DPP16_t16_Helper<op, ps, opName>, SIMCInstr<ps.PseudoInstr, subtarget>;
 
 class VOP3_DPP16_Gen<bits<10> op, VOP_DPP_Pseudo ps, GFXGen Gen,
                      string opName = ps.OpName>
@@ -1568,7 +1568,7 @@ class Base_VOP3_DPP8_t16<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
 
 class Base_VOP3b_DPP16<bits<10> op, VOP_DPP_Pseudo ps,
                        string opName = ps.OpName>
-    : Base_VOP3_DPP16<op, ps, opName> {
+    : VOP3_DPP16_Helper<op, ps, opName> {
   bits<7> sdst;
   let Inst{14 - 8} = sdst;
 }
