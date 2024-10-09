@@ -1116,12 +1116,12 @@ multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Dot_Realtriple<GFX11Gen, op>, VOP3Dot_Realtriple<GFX12Gen, op>;
 
 multiclass VOP3_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string opName = NAME,
-                                     string pseudo_mnemonic = "", bit isSingle = 0> :
+                                           string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
 multiclass VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string opName = NAME,
-                                     string pseudo_mnemonic = "", bit isSingle = 0> {
+                                                      string pseudo_mnemonic = "", bit isSingle = 0> {
   defm opName#"_t16": VOP3_Realtriple_t16_gfx11_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
   defm opName#"_fake16": VOP3_Realtriple_t16_gfx11_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
 }

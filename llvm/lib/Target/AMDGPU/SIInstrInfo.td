@@ -2149,8 +2149,8 @@ class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
   string ret = dst#", "#src0#src1#src2#opsel#mods#clamp;
 }
 
-//FIXME-TRUE16 AsmVOP3OpSel will be deprecated after all
-//VOP3 16 bit instructions are replaced to true16 format
+// FIXME-TRUE16 AsmVOP3OpSel will be deprecated after all
+// VOP3 16 bit instructions are replaced to true16 format
 class getAsmVOP3OpSel <int NumSrcArgs,
                        bit HasClamp,
                        bit HasOMod,

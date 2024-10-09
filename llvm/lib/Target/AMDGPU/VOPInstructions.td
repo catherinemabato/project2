@@ -1384,7 +1384,6 @@ class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Pr
 }
 
 class VOP3_Profile_True16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProfile_True16<P> {
-
   let HasClamp = !if(Features.HasClamp, 1, P.HasClamp);
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
@@ -1397,7 +1396,6 @@ class VOP3_Profile_True16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
 }
 
 class VOP3_Profile_Fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProfile_Fake16<P> {
-
   let HasClamp = !if(Features.HasClamp, 1, P.HasClamp);
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
   let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
@@ -1524,7 +1522,7 @@ class VOP3_DPP16_t16<bits<10> op, VOP_DPP_Pseudo ps, int subtarget,
 
 class VOP3_DPP16_Gen<bits<10> op, VOP_DPP_Pseudo ps, GFXGen Gen,
                      string opName = ps.OpName>
-    : VOP3_DPP16 <op, ps, Gen.Subtarget, opName> {
+    : VOP3_DPP16<op, ps, Gen.Subtarget, opName> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
   let DecoderNamespace = Gen.DecoderNamespace;
 }
@@ -1836,7 +1834,7 @@ multiclass VOP3_Realtriple_t16_gfx12<bits<10> op, string asmName, string opName 
                                      string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
-multiclass VOP3_Realtriple_t16_and_f16_gfx12<bits<10> op, string asmName, string opName = NAME,
+multiclass VOP3_Realtriple_t16_and_fake16_gfx12<bits<10> op, string asmName, string opName = NAME,
                                    string pseudo_mnemonic = "", bit isSingle = 0> {
   defm opName#"_t16":VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
   defm opName#"_fake16":VOP3_Realtriple_t16_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
