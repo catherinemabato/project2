@@ -13,6 +13,8 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -266,6 +268,27 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
               LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
       }
     }
+  }
+}
+
+void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
+  auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->isInStdNamespace())
+    return;
+  static const llvm::StringSet<> CapturingMethods{"insert", "push",
+                                                  "push_front", "push_back"};
+  if (!CapturingMethods.contains(MD->getName()))
+    return;
+  for (ParmVarDecl *PVD : MD->parameters()) {
+    if (PVD->hasAttr<LifetimeCaptureByAttr>())
+      continue;
+    // PVD->dumpColor();
+    // auto *RD = PVD->getType()->getAsCXXRecordDecl();
+    // if (RD && RD->hasAttr<PointerAttr>()) {
+    // int CaptureByThis[] = {0}; // Replace with THIS.
+    // PVD->addAttr(
+    //     LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
+    // }
   }
 }
 

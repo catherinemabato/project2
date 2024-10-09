@@ -75,23 +75,26 @@ namespace usage_ok {
   }
 }
 
-# 1 "<std>" 1 3
 namespace std {
   using size_t = __SIZE_TYPE__;
-  struct string {
-    string();
-    string(const char*);
+  template<typename T>
+  struct basic_string {
+    basic_string();
+    basic_string(const T*);
 
     char &operator[](size_t) const [[clang::lifetimebound]];
   };
-  string operator""s(const char *, size_t);
+  using string =  basic_string<char>;
+  string operator""s(const char *, size_t); // expected-warning {{}}
 
-  struct string_view {
-    string_view();
-    string_view(const char *p [[clang::lifetimebound]]);
-    string_view(const string &s [[clang::lifetimebound]]);
+  template<typename T>
+  struct basic_string_view {
+    basic_string_view();
+    basic_string_view(const T *p);
+    basic_string_view(const string &s [[clang::lifetimebound]]);
   };
-  string_view operator""sv(const char *, size_t);
+  using string_view = basic_string_view<char>;
+  string_view operator""sv(const char *, size_t); // expected-warning {{}}
 
   struct vector {
     int *data();
@@ -100,7 +103,6 @@ namespace std {
 
   template<typename K, typename V> struct map {};
 }
-# 68 "attr-lifetimebound.cpp" 2
 
 using std::operator""s;
 using std::operator""sv;
@@ -112,7 +114,7 @@ namespace p0936r0_examples {
   void f() {
     std::string_view sv = "hi";
     std::string_view sv2 = sv + sv; // expected-warning {{temporary}}
-    sv2 = sv + sv; // FIXME: can we infer that we should warn here too?
+    sv2 = sv + sv; // expected-warning {{object backing the pointer}}
   }
 
   struct X { int a, b; };
@@ -238,11 +240,6 @@ template <class T> T *addressof(T &arg) {
         &const_cast<char &>(reinterpret_cast<const volatile char &>(arg)));
 }
 
-template<typename T>
-struct basic_string_view {
-  basic_string_view(const T *);
-};
-
 template <class T> struct span {
   template<size_t _ArrayExtent>
 	span(const T (&__arr)[_ArrayExtent]) noexcept;
@@ -307,3 +304,125 @@ void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
   foo2 = NonAnnotatedFoo();
 }
 } // namespace GH106372
+
+namespace lifetime_capture_by {
+
+struct S {
+  const int *x;
+  void captureInt(const int&x [[clang::lifetime_capture_by(this)]]) { this->x = &x; }
+  void captureSV(std::string_view sv [[clang::lifetime_capture_by(this)]]);
+};
+
+///////////////////////////
+// Test for valid usages.
+///////////////////////////
+[[clang::lifetime_capture_by(unknown)]] // expected-error {{'lifetime_capture_by' attribute only applies to parameters and implicit object parameters}}
+void nonMember(
+    const int &x1 [[clang::lifetime_capture_by(s, t)]],
+    S &s,
+    S &t,
+    const int &x2 [[clang::lifetime_capture_by(12345 + 12)]], // expected-error {{'lifetime_capture_by' attribute argument 12345 + 12 is not a known function parameter. Must be a function parameter of one of 'this', 'global' or 'unknown'}}
+    const int &x3 [[clang::lifetime_capture_by(abcdefgh)]],   // expected-error {{'lifetime_capture_by' attribute argument 'abcdefgh' is not a known function parameter. Must be a function parameter of one of 'this', 'global' or 'unknown'}}
+    const int &x4 [[clang::lifetime_capture_by("abcdefgh")]], // expected-error {{'lifetime_capture_by' attribute argument "abcdefgh" is not a known function parameter. Must be a function parameter of one of 'this', 'global' or 'unknown'}}
+    const int &x5 [[clang::lifetime_capture_by(this)]], // expected-error {{'lifetime_capture_by' argument references unavailable implicit 'this'}}
+    const int &x6 [[clang::lifetime_capture_by()]], // expected-error {{'lifetime_capture_by' attribute specifies no capturing entity}}
+    const int& x7 [[clang::lifetime_capture_by(u, 
+                                               x7)]], // expected-error {{'lifetime_capture_by' argument references itself}}
+    const S& u
+  )
+{
+  s.captureInt(x1);
+}
+
+struct T {
+  void member(
+    const int &x [[clang::lifetime_capture_by(s)]], 
+    S &s,
+    S &t,            
+    const int &y [[clang::lifetime_capture_by(s)]],
+    const int &z [[clang::lifetime_capture_by(this, x, y)]],
+    const int &u [[clang::lifetime_capture_by(global, x, s)]])
+  {
+    s.captureInt(x);
+  }
+};
+
+struct ThisIsCaptured {
+  void capture(S& s) [[clang::lifetime_capture_by(s)]];
+  void bar(S& s) [[clang::lifetime_capture_by(abcd)]]; // expected-error {{'lifetime_capture_by' attribute argument 'abcd' is not a known function parameter}}
+  void baz(S& s) [[clang::lifetime_capture_by(this)]]; // expected-error {{'lifetime_capture_by' argument references itself}}
+};
+
+///////////////////////////
+// Detect dangling cases.
+///////////////////////////
+void captureInt(const int&x [[clang::lifetime_capture_by(s)]], S&s);
+void captureRValInt(int&&x [[clang::lifetime_capture_by(s)]], S&s);
+void noCaptureInt(int x [[clang::lifetime_capture_by(s)]], S&s);
+
+std::string_view substr(const std::string& s [[clang::lifetimebound]]);
+std::string_view strcopy(const std::string& s);
+
+void captureSV(std::string_view x [[clang::lifetime_capture_by(s)]], S&s);
+void captureRValSV(std::string_view&& x [[clang::lifetime_capture_by(s)]], S&s);
+void noCaptureSV(std::string_view x, S&s);
+
+void captureS(const std::string& x [[clang::lifetime_capture_by(s)]], S&s);
+void captureRValS(std::string&& x [[clang::lifetime_capture_by(s)]], S&s);
+
+void use() {
+  std::string_view local_sv;
+  std::string local_s;
+  S s;
+  // Capture an 'int'.
+  int local;
+  captureInt(1, // expected-warning {{object captured by 's' will be destroyed at the end of the full-expression}}
+            s);
+  captureRValInt(1, s); // expected-warning {{object captured by 's'}}
+  captureInt(local, s);
+  
+  noCaptureInt(1, s);
+  noCaptureInt(local, s);
+
+  // Capture using std::string_view.
+  captureSV(local_sv, s);
+  captureSV(std::string(), // expected-warning {{object captured by 's'}}
+            s);
+  captureSV(substr(
+      std::string() // expected-warning {{object captured by 's'}}
+      ), s);
+  captureSV(substr(local_s), s);
+  captureSV(strcopy(std::string()), s);
+
+  captureRValSV(std::move(local_sv), s);
+  captureRValSV(std::string(), s); // expected-warning {{object captured by 's'}}
+  captureRValSV(std::string_view{"abcd"}, s);
+  captureRValSV(substr(local_s), s);
+  captureRValSV(substr(std::string()), s); // expected-warning {{object captured by 's'}}
+  captureRValSV(strcopy(std::string()), s);
+
+  noCaptureSV(local_sv, s);
+  noCaptureSV(std::string(), s);
+  noCaptureSV(substr(std::string()), s);
+
+  // Capture using std::string.
+  captureS(std::string(), s); // expected-warning {{object captured by 's'}}
+  captureS(local_s, s);
+  captureRValS(std::move(local_s), s);
+  captureRValS(std::string(), s); // expected-warning {{object captured by 's'}}
+
+  // Member functions.  
+  s.captureInt(1); // expected-warning {{object captured by 's' will be destroyed at the end of the full-expression}}
+  s.captureSV(std::string()); // expected-warning {{object captured by 's'}}
+  s.captureSV(substr(std::string())); // expected-warning {{object captured by 's'}}
+  s.captureSV(strcopy(std::string()));
+
+  // This is captured.
+  ThisIsCaptured{}.capture(s); //expected-warning {{object captured by 's'}}
+  ThisIsCaptured TIS;
+  TIS.capture(s);
+}
+} // namespace lifetime_capture_by_usage
+
+// Test for templated code.
+// 2 nested function calls foo(sv, bar(sv, setsv));
