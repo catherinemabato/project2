@@ -21,6 +21,7 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -32,6 +33,9 @@ class VPRecipeBuilder {
 
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
+
+  // Target Transform Info
+  const TargetTransformInfo *TTI;
 
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
@@ -105,11 +109,12 @@ class VPRecipeBuilder {
 
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
+                  const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
                   PredicatedScalarEvolution &PSE, VPBuilder &Builder)
-      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM),
-        PSE(PSE), Builder(Builder) {}
+      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
+        CM(CM), PSE(PSE), Builder(Builder) {}
 
   /// Create and return a widened recipe for \p I if one can be created within
   /// the given VF \p Range.
@@ -118,7 +123,6 @@ public:
                                        VFRange &Range, VPBasicBlock *VPBB);
 
   VPRecipeBase *tryToCreatePartialReduction(Instruction *Reduction,
-                                            unsigned ScaleFactor,
                                             ArrayRef<VPValue *> Operands);
 
   /// Set the recipe created for given ingredient.
