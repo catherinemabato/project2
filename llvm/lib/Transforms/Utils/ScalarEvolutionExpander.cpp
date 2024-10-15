@@ -681,7 +681,14 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
                          SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
   }
 
-  Value *RHS = expand(S->getRHS());
+  const SCEV *RHSExpr = S->getRHS();
+  Value *RHS = expand(RHSExpr);
+  if (SafeUDivMode && !SE.isKnownNonZero(RHSExpr)) {
+    if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr))
+      RHS = Builder.CreateFreeze(RHS);
+    RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
+                                  {RHS, ConstantInt::get(RHS->getType(), 1)});
+  }
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
@@ -1376,11 +1383,14 @@ Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
 Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
+  bool PrevSafeMode = SafeUDivMode;
+  SafeUDivMode |= IsSequential;
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   if (IsSequential)
     LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
+    SafeUDivMode = (IsSequential && i != 0) || PrevSafeMode;
     Value *RHS = expand(S->getOperand(i));
     if (IsSequential && i != 0)
       RHS = Builder.CreateFreeze(RHS);
@@ -1395,6 +1405,7 @@ Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
     }
     LHS = Sel;
   }
+  SafeUDivMode = PrevSafeMode;
   return LHS;
 }
 
