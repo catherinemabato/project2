@@ -547,6 +547,8 @@ struct Ctx {
   LinkerScript *script;
   std::unique_ptr<TargetInfo> target;
 
+  ErrorHandler *e;
+
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
   uint8_t *bufferStart;
@@ -678,6 +680,25 @@ static inline void internalLinkerError(StringRef loc, const Twine &msg) {
   errorOrWarn(loc + "internal linker error: " + msg + "\n" +
               llvm::getBugReportMsg());
 }
+
+struct ELFSyncStream : SyncStream {
+  Ctx &ctx;
+  ELFSyncStream(Ctx &ctx, DiagLevel level)
+      : SyncStream(*ctx.e, level), ctx(ctx) {}
+};
+
+template <typename T>
+std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>,
+                 const ELFSyncStream &>
+operator<<(const ELFSyncStream &s, T &&v) {
+  s.os << std::forward<T>(v);
+  return s;
+}
+
+ELFSyncStream Log(Ctx &ctx);
+ELFSyncStream Warn(Ctx &ctx);
+ELFSyncStream Err(Ctx &ctx);
+ELFSyncStream Fatal(Ctx &ctx);
 
 } // namespace lld::elf
 
